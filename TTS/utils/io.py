@@ -41,6 +41,10 @@ def load_fsspec(
     Returns:
         Object stored in path.
     """
+    # Import XttsConfig here to avoid circular imports
+    from TTS.tts.configs.xtts_config import XttsConfig
+    torch.serialization.add_safe_globals([XttsConfig])
+
     is_local = os.path.isdir(path) or os.path.isfile(path)
     if cache and not is_local:
         with fsspec.open(
@@ -48,10 +52,10 @@ def load_fsspec(
             filecache={"cache_storage": str(get_user_data_dir("tts_cache"))},
             mode="rb",
         ) as f:
-            return torch.load(f, map_location=map_location, **kwargs)
+            return torch.load(f, map_location=map_location, weights_only=False, **kwargs)
     else:
         with fsspec.open(path, "rb") as f:
-            return torch.load(f, map_location=map_location, **kwargs)
+            return torch.load(f, map_location=map_location, weights_only=False, **kwargs)
 
 
 def load_checkpoint(
