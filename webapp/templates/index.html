@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiobook Creator Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.waves.min.js"></script>
+    <style>
+        :root {
+            --primary: #5965F9;
+            --primary-dark: #4854e0;
+            --secondary: #6EE7B7;
+            --dark: #1F2937;
+            --light: #F9FAFB;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--dark);
+            overflow-x: hidden;
+            background-color: #000;
+        }
+        
+        #vanta-bg {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -2;
+        }
+        
+        .overlay {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
+            z-index: -1;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+        }
+        
+        .glass-card {
+            transform-style: preserve-3d;
+            transition: all 0.5s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-10px) rotateX(5deg);
+        }
+        
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+            box-shadow: 0 5px 15px rgba(89, 101, 249, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-glow:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(89, 101, 249, 0.6);
+        }
+        
+        .btn-glow::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(transparent, rgba(255, 255, 255, 0.4), transparent);
+            transform: rotate(45deg);
+            transition: all 0.8s ease;
+        }
+        
+        .btn-glow:hover::after {
+            animation: shine 1.5s infinite;
+        }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .upload-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .upload-zone:hover, .upload-zone.active {
+            border-color: var(--secondary);
+            background: rgba(110, 231, 183, 0.1);
+        }
+        
+        .spinner {
+            border-top-color: var(--secondary);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .icon-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .file-item {
+            transform: translateX(-20px);
+            opacity: 0;
+            animation: slide-in 0.5s forwards;
+        }
+        
+        @keyframes slide-in {
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen py-12 text-white">
+    <div id="vanta-bg"></div>
+    <div class="overlay"></div>
+    
+    <div class="container mx-auto px-4 relative z-10">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header Section -->
+            <div class="text-center mb-12">
+                <h1 class="text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-green-300">AudioBook Creator</h1>
+                <p class="text-xl text-gray-300 max-w-2xl mx-auto">Transform your ebooks into immersive audio experiences with AI</p>
+            </div>
+            
+            <!-- Main Card -->
+            <div class="glass p-8 md:p-12 glass-card mb-8">
+                <!-- Progress Steps -->
+                <div class="flex justify-between items-center mb-12 px-4">
+                    <div class="flex flex-col items-center">
+                        <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center mb-2 icon-pulse">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-sm text-gray-300">Upload</span>
+                    </div>
+                    
+                    <div class="flex-1 h-1 bg-gray-700 mx-2">
+                        <div class="h-1 bg-gradient-to-r from-purple-600 to-indigo-600 w-0" id="progress-bar-1"></div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center">
+                        <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mb-2" id="step-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-sm text-gray-400">Processing</span>
+                    </div>
+                    
+                    <div class="flex-1 h-1 bg-gray-700 mx-2">
+                        <div class="h-1 bg-gradient-to-r from-indigo-600 to-green-400 w-0" id="progress-bar-2"></div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center">
+                        <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mb-2" id="step-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                            </svg>
+                        </div>
+                        <span class="text-sm text-gray-400">Complete</span>
+                    </div>
+                </div>
+                
+                <!-- Upload Form -->
+                <form id="uploadForm" class="space-y-8">
+                    <div class="space-y-3">
+                        <label class="block text-lg font-medium text-gray-200">Email Address</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                </svg>
+                            </div>
+                            <input type="email" name="email" required
+                                   class="pl-12 w-full py-4 bg-gray-800 bg-opacity-50 rounded-xl border border-gray-700 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 text-white transition duration-200"
+                                   placeholder="Enter your email">
+                        </div>
+                        <p class="text-sm text-gray-400">We'll notify you when your audiobook is ready.</p>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <label class="block text-lg font-medium text-gray-200">Upload Ebook</label>
+                        <div class="upload-zone rounded-xl p-8 text-center" id="upload-zone">
+                            <div class="floating">
+                                <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <div class="text-gray-300 mb-4">
+                                <span class="font-medium text-green-300">Click to upload</span> or drag and drop your ebook
+                            </div>
+                            <p class="text-sm text-gray-400">Supports EPUB, PDF, or TXT (up to 16MB)</p>
+                            <input id="file-upload" name="file" type="file" class="hidden" accept=".epub,.pdf,.txt">
+                        </div>
+                        <div id="file-preview" class="hidden p-4 bg-gray-800 bg-opacity-40 rounded-xl border border-gray-700">
+                            <div class="flex items-center file-item">
+                                <div class="bg-purple-600 rounded-lg p-2 mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-white truncate" id="file-name">Document.pdf</p>
+                                    <p class="text-xs text-gray-400" id="file-size">2.4 MB</p>
+                                </div>
+                                <button type="button" id="remove-file" class="text-gray-400 hover:text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="submit-btn"
+                            class="btn-glow w-full flex justify-center items-center py-4 px-6 rounded-xl text-base font-medium text-white focus:outline-none">
+                        <span>Generate Audiobook</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </form>
+                
+                <!-- Processing Status (Hidden by default) -->
+                <div id="status" class="space-y-6 text-center hidden">
+                    <div class="spinner rounded-full h-16 w-16 border-4 border-gray-600 mx-auto"></div>
+                    <div>
+                        <h3 class="text-xl font-medium text-purple-300 mb-2">Processing Your Audiobook</h3>
+                        <p class="text-gray-300">Your ebook is being converted into an audiobook. This may take a few minutes.</p>
+                        <p class="text-gray-400 text-sm mt-2">We'll email you at <span id="email-display" class="text-green-300 font-semibold">user@example.com</span> when it's ready.</p>
+                    </div>
+                    <div class="pt-4">
+                        <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-green-400" style="width: 0%" id="processing-progress"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Success Message (Hidden by default) -->
+                <div id="success" class="text-center space-y-6 hidden">
+                    <div class="mx-auto w-16 h-16 rounded-full bg-green-500 bg-opacity-20 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-medium text-green-300 mb-2">Conversion Started Successfully!</h3>
+                        <p class="text-gray-300">Your audiobook is being processed. We'll send you an email with download link when it's ready.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Feature Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="glass p-6 rounded-xl glass-card">
+                    <div class="w-12 h-12 rounded-full bg-purple-600 bg-opacity-20 flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-white mb-2">Natural Voices</h3>
+                    <p class="text-sm text-gray-300">Our AI creates lifelike narration that sounds natural and engaging.</p>
+                </div>
+                
+                <div class="glass p-6 rounded-xl glass-card">
+                    <div class="w-12 h-12 rounded-full bg-indigo-600 bg-opacity-20 flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-white mb-2">Save Time</h3>
+                    <p class="text-sm text-gray-300">Convert lengthy ebooks into audio in minutes, not hours.</p>
+                </div>
+                
+                <div class="glass p-6 rounded-xl glass-card">
+                    <div class="w-12 h-12 rounded-full bg-green-600 bg-opacity-20 flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-white mb-2">Multiple Formats</h3>
+                    <p class="text-sm text-gray-300">Supports EPUB, PDF, and TXT files for maximum compatibility.</p>
+                </div>
+            </div>
+            
+            <div class="text-center text-gray-500 text-xs">
+                &copy; 2025 AudioBook Creator. All rights reserved.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Vanta.js background
+        VANTA.WAVES({
+            el: "#vanta-bg",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00,
+            color: 0x5965F9,
+            shininess: 55.00,
+            waveHeight: 20.00,
+            waveSpeed: 1.05,
+            zoom: 0.65
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadForm = document.getElementById('uploadForm');
+            const fileUpload = document.getElementById('file-upload');
+            const uploadZone = document.getElementById('upload-zone');
+            const filePreview = document.getElementById('file-preview');
+            const fileName = document.getElementById('file-name');
+            const fileSize = document.getElementById('file-size');
+            const removeFile = document.getElementById('remove-file');
+            const status = document.getElementById('status');
+            const success = document.getElementById('success');
+            const submitBtn = document.getElementById('submit-btn');
+            const emailDisplay = document.getElementById('email-display');
+            const processingProgress = document.getElementById('processing-progress');
+            const step2 = document.getElementById('step-2');
+            const step3 = document.getElementById('step-3');
+            const progressBar1 = document.getElementById('progress-bar-1');
+            const progressBar2 = document.getElementById('progress-bar-2');
+            
+            // Handle file upload via click
+            uploadZone.addEventListener('click', () => {
+                fileUpload.click();
+            });
+            
+            // File upload change event
+            fileUpload.addEventListener('change', handleFileSelect);
+            
+            // Remove file button
+            removeFile.addEventListener('click', () => {
+                fileUpload.value = '';
+                filePreview.classList.add('hidden');
+                uploadZone.classList.remove('hidden');
+            });
+            
+            // Handle drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadZone.classList.add('active');
+            }
+            
+            function unhighlight() {
+                uploadZone.classList.remove('active');
+            }
+            
+            uploadZone.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length) {
+                    fileUpload.files = files;
+                    handleFileSelect();
+                }
+            }
+            
+            function handleFileSelect() {
+                if (fileUpload.files.length) {
+                    const file = fileUpload.files[0];
+                    
+                    // Show file preview
+                    fileName.textContent = file.name;
+                    fileSize.textContent = formatFileSize(file.size);
+                    filePreview.classList.remove('hidden');
+                    uploadZone.classList.add('hidden');
+                }
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Form submission
+            uploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(uploadForm);
+                const email = formData.get('email');
+                
+                // Validate form
+                if (!email || !fileUpload.files.length) {
+                    alert('Please provide both email and file');
+                    return;
+                }
+                
+                // Update email display
+                emailDisplay.textContent = email;
+                
+                // Show loading state
+                uploadForm.classList.add('hidden');
+                status.classList.remove('hidden');
+                
+                // Animate progress bars
+                progressBar1.style.width = '100%';
+                progressBar1.style.transition = 'width 1s ease';
+                
+                step2.classList.remove('bg-gray-700');
+                step2.classList.add('bg-indigo-600', 'icon-pulse');
+                
+                // Simulate progress
+                simulateProgress();
+                
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        // Hide status and show success
+                        setTimeout(() => {
+                            status.classList.add('hidden');
+                            success.classList.remove('hidden');
+                            
+                            // Update progress steps
+                            progressBar2.style.width = '100%';
+                            progressBar2.style.transition = 'width 0.5s ease';
+                            
+                            step3.classList.remove('bg-gray-700');
+                            step3.classList.add('bg-green-500', 'icon-pulse');
+                        }, 2000);
+                    } else {
+                        alert(data.error || 'An error occurred');
+                        status.classList.add('hidden');
+                        uploadForm.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    alert('An error occurred while uploading the file');
+                    status.classList.add('hidden');
+                    uploadForm.classList.remove('hidden');
+                }
+            });
+            
+            function simulateProgress() {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress > 95) {
+                        progress = 95;
+                        clearInterval(interval);
+                    }
+                    processingProgress.style.width = `${progress}%`;
+                }, 300);
+            }
+        });
+    </script>
+</body>
+</html> 
